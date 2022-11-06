@@ -17,9 +17,10 @@ static void Draw_nodes (FILE *fpout, const Node *node, int *counter);
 
 //======================================================================================
 
-int Draw_tree_graph (const Tree *tree)
+int Draw_tree_graph (const Tree *tree, const char *name_output_file)
 {
-    assert (tree != nullptr && "tree is nullptr\n");
+    assert (tree != nullptr && "tree is nullptr");
+    assert (name_output_file != nullptr && "name_output_file is nullptr");
 
     FILE *graph = Open_file_ptr ("temp/graph_img/graph.txt", "w");
     if (Check_nullptr (graph))
@@ -40,12 +41,10 @@ int Draw_tree_graph (const Tree *tree)
     fprintf(graph, "}\n}\n");
     fclose(graph);
 
-    
-    static int Cnt_graphs = 0;      //<-To display the current tree view
 
     char command_buffer[Max_command_buffer] = {0};
     sprintf(command_buffer, "dot -Tpng temp/graph_img/graph.txt"
-                            " -o temp/graph_img/picture%d.png", Cnt_graphs);
+                            " -o temp/%s", name_output_file);
 
     if (system(command_buffer))
     {
@@ -60,9 +59,8 @@ int Draw_tree_graph (const Tree *tree)
         return TREE_DRAW_GRAPH_ERR;
     }
 
-    fprintf (fp_logs, "<img src = graph_img/picture%d.png />\n", Cnt_graphs);
+    fprintf (fp_logs, "<img src = %s />\n", name_output_file);
                                 
-    Cnt_graphs++;
     return 0;
 }
 
@@ -73,7 +71,6 @@ static void Draw_nodes (FILE *fpout, const Node *node, int *counter)
     assert (node != nullptr && "node is nullptr\n");
 
     (*counter)++;
-    
     
 
     char* ch_right_node_ptr = (char*) node->right;

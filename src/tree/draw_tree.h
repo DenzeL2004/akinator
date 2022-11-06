@@ -7,7 +7,7 @@
 
 const int Max_command_buffer = 100;
 
-int Draw_tree_graph (const Tree *tree);
+int Draw_tree_graph (const Tree *tree, const char *name_output_file);
 
 enum Draw_tree_func_err
 {

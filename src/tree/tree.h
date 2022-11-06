@@ -2,6 +2,7 @@
 #define _TREE_H_
 
 
+
 #include "config_tree.h"
 #include "../log_info/log_def.h"
 
@@ -9,6 +10,8 @@
 const int Max_definition_buffer = 100;
 
 const int Max_object_buffer     = 100;
+
+static const char *Default_output_file_name = "last_save_base.txt";
 
 
 struct Node
@@ -20,9 +23,11 @@ struct Node
 
 struct Tree
 {
-    long cnt_nodes      = 0; 
+    long cnt_nodes      = 0;
 
     Node *root = nullptr;
+
+    char *buffer_ptr    = nullptr;
 };
 
 
@@ -31,9 +36,13 @@ enum Tree_func_err
     TREE_CTOR_ERR           = -1,
     TREE_DTOR_ERR           = -2,
 
-    TREE_ADD_NODE_ERR       = -7,
+    SAVING_NODE_ERR         = -3,
+    SAVING_DATABASE_ERR     = -4,
 
-    AKINATOR_GAME_ERR       = -3,
+    READ_NODE_ERR           = -5,
+    READ_DATABASE_ERR       = -6,
+
+    TREE_ADD_NODE_ERR       = -7,
 };
 
 enum Tree_err
@@ -59,9 +68,21 @@ int Tree_dtor (Tree *tree);
 */
 int Add_node_to_pointer (Tree *tree, Node **ptr);
 
+
+/** 
+ * @brief Removes all links and node values from the subtree
+ * @param [in] node Pointer to Node pointer
+*/
+void Removing_subtree_from_node (Node **node);
+
+
+int Save_tree_to_file (const Tree *tree, const char *name_output_file = Default_output_file_name);
+
+int Read_tree_from_file (Tree *tree, const char *name_input_file);
+
+
 int Is_leaf_node (const Node *node);
 
-int Akinator (Tree *tree, Node *node);
 
 #define Tree_dump(tree, ...)                       \
         Tree_dump_ (tree, LOG_ARGS, __VA_ARGS__)

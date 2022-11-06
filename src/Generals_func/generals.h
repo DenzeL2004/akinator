@@ -73,7 +73,7 @@ struct Options{
 
 bool Check_nullptr  (void *ptr);
 
-void Mu_flush ();
+void My_flush ();
 
 bool Check_num (const char *str);
 

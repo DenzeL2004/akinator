@@ -33,10 +33,10 @@ bool Check_num (const char *str)
 	return 1;
 }
 
-void Mu_flush ()
+void My_flush ()
 {
 	char ch = 0;
-	while ((ch = (char)getchar()) != '\n' && ch != EOF)
+	while ((ch = (char)getchar()) != EOF && ch != '\n')
 			continue;
 }
 
