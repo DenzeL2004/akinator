@@ -39,6 +39,7 @@ int Close_logs_file ();
 
 FILE *Get_log_file_ptr ();
 
+
 int Log_report_ (LOG_PARAMETS, const char *format, ...);
 
 int Err_report_ (LOG_PARAMETS);

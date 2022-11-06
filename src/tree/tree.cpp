@@ -146,7 +146,6 @@ static int Delete_node (Node **node)
     (*node)->left  = nullptr;
     (*node)->right = nullptr;
 
-    free ((*node)->data);
     (*node)->data = nullptr;
 
     free ((*node));
@@ -444,7 +443,7 @@ int Tree_dump_ (const Tree *tree,
 
     fprintf (fp_logs, "=================================================\n\n");
 
-    va_list args = nullptr;
+    va_list args = {};
 
     va_start(args, format);
 

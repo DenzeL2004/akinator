@@ -17,18 +17,51 @@ DEF_MODE (PRINT, {
 })
 
 DEF_MODE (DEFINITION, {
-    if (Get_definition (tree))
+    Phrase_akinator (RESET, "Enter the name of the object you want to find\n");
+
+    My_flush ();
+
+    char name_obj[Max_command_buffer] = {0};
+    if (Read_string (name_obj))
     {
-        Log_report ("GEet definition error\n");
+        Log_report ("Error reading the name of object\n");
+        Err_report ();
+        return GET_DEFINITION_ERR;
+    }
+
+    if (Get_definition (tree, name_obj))
+    {
+        Log_report ("Get definition error\n");
         Err_report ();
         return GET_DEFINITION_ERR;
     }
 })
 
 DEF_MODE (COMPARISON, {
-    if (Compare_objects (tree))
+    Phrase_akinator (RESET, "Enter the names of the objects you want to compare\n");
+
+    My_flush ();
+
+    char name_obj1[Max_command_buffer] = {0};
+    if (Read_string (name_obj1))
     {
-        Log_report ("GEet definition error\n");
+        Log_report ("Error reading the name of object\n");
+        Err_report ();
+        return COMPARE_OBJECT_ERR;
+    }
+
+
+    char name_obj2[Max_command_buffer] = {0};
+    if (Read_string (name_obj2))
+    {
+        Log_report ("Error reading the name of object\n");
+        Err_report ();
+        return COMPARE_OBJECT_ERR;
+    }
+
+    if (Compare_objects (tree, name_obj1, name_obj2))
+    {
+        Log_report ("Get definition error\n");
         Err_report ();
         return COMPARE_OBJECT_ERR;
     }

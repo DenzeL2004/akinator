@@ -2,9 +2,11 @@
 #include <string>
 #include <windows.h>
 
+
 #include "akinator_game/akinator_game.h"
 #include "src/log_info/log_errors.h"
 #include "src/Generals_func/generals.h"
+
 
 int main (int argc, char *argv[])
 {
@@ -16,6 +18,7 @@ int main (int argc, char *argv[])
             return OPEN_FILE_LOG_ERR;
 
     #endif 
+    
 
     Tree tree = {};
 

@@ -43,10 +43,12 @@ int Log_report_ (const char* file_name, const char* func_name, int line, const c
     fprintf (fp_logs, "In function %s\n", func_name);
     fprintf (fp_logs, "In line %d\n\n", line);
     
-    va_list args = nullptr;
+    va_list args = {0};
    
     va_start(args, format);
+
     vfprintf(fp_logs, format, args);
+    
     va_end(args);
 
     fprintf (fp_logs, "==========================================================\n\n\n");
