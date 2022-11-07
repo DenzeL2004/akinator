@@ -30,7 +30,12 @@ enum Log_errors
 #define Err_report()                            \
         Err_report_ (LOG_ARGS)
 
-
+#define PROCESS_ERROR(...)                              \
+        {                                               \
+            Log_report (__VA_ARGS__);                   \
+            Err_report ();                              \
+        }                                               \
+        while (0);                                
 
 
 int Open_logs_file ();

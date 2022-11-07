@@ -16,7 +16,6 @@ obj/main.o: main.cpp
 	g++ main.cpp -c -o obj/main.o $(FLAGS)
 
 
-
 obj/akinator_game.o: akinator_game/akinator_game.cpp akinator_game/akinator_game.h $(WAY)/tree.h
 	g++ akinator_game/akinator_game.cpp -c -o obj/akinator_game.o $(FLAGS)
 

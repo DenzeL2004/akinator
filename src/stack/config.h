@@ -6,7 +6,7 @@
 typedef char* elem;
 
 
-#define USE_LOG  //<- connect when we use logs
+#define USE_LOG  //<- enable when we use logs
 
 //#define USE_STACK_DUMP
 

@@ -1,19 +1,27 @@
-#define  TX_USE_SPEAK
-#include "TXLib.h"
+#include "../architecture/os_config.h"
+
+#ifdef WINDOWS_USER
+
+    #define  TX_USE_SPEAK
+    #include "TXLib.h"
+
+    #include <windows.h>
+
+#endif
 
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
-#include "windows.h"
 
 
 #include "akinator_game.h"
 
 #include "../src/log_info/log_errors.h"
 #include "../src/Generals_func/generals.h"
-#include "../src/stack/stack.h"
 
+#include "../src/stack/stack.h"
+#include "../src/process_text/process_text.h"
 
 
 void Phrase_akinator (const char *colour, const char *format, ...); 
@@ -31,20 +39,66 @@ static int Play_akinator (Tree *tree);
 static int Akinator (Tree *tree, Node *node);
 
 
+
+static int Read_new_object (Node *node);
+
 static int Read_string (char *str);
+
 
 static int Print_database (Tree *tree);
 
 
-static int Get_definition (Tree *tree, const char *name_obj);
+static int Get_definition (Tree *tree);
 
-static int Compare_objects (Tree *tree, const char *name_obj1, const char *name_obj2);
-
+static int Compare_objects (Tree *tree);
 
 
 static int Find_object (Node *node, const char *name_obj, Stack *def);
 
-static int Print_definition (Stack *def, const char *colour = RESET);         
+static int Print_definition (Stack *def, const char *colour = RESET); 
+
+
+static int Save_nodes_recursive_to_file (const Node *node, FILE *fpout);
+
+
+static int Read_nodes_recursive_from_buffer (Node *node, Text_info *text);
+
+static int Read_node_from_buffer (Node *node, Text_info *text);
+
+//======================================================================================
+
+int Akinator_struct_ctor (Akinator_struct *akinator)
+{
+    assert (akinator != nullptr && "akinator is nullptr");
+
+    if (Tree_ctor (&akinator->tree))
+    {
+        PROCESS_ERROR ("ERROR: Ctor tree in main\n");
+        return AKINATOR_STRUCT_CTOR_ERR;
+    }
+    
+    akinator->database = nullptr;
+
+    return 0;
+}
+
+//======================================================================================
+
+int Akinator_struct_dtor (Akinator_struct *akinator)
+{
+    assert (akinator != nullptr && "akinator is nullptr");
+
+    if (Tree_dtor (&akinator->tree))
+    {
+        PROCESS_ERROR ("ERROR: Ctor tree in main\n");
+        return AKINATOR_STRUCT_DTOR_ERR;
+    }
+    
+    free (akinator->database);
+    akinator->database = nullptr;
+
+    return 0;
+}
 
 //======================================================================================
 
@@ -56,9 +110,9 @@ static int Print_definition (Stack *def, const char *colour = RESET);
         else                                    \
                                                         
 
-int Game (Tree *tree)
+int Game (Akinator_struct *akinator)
 {
-    assert (tree != nullptr && "tree is nullptr");
+    assert (akinator != nullptr && "akinator is nullptr");
 
     Greeting_akinator ();
 
@@ -73,14 +127,57 @@ int Game (Tree *tree)
 
         if (scanf ("%s", cur_cmd) != 1)
         {
-            Log_report ("Error reading the operating mode of the akinator\n");
-            Err_report ();
+            PROCESS_ERROR ("Error reading the operating mode of the akinator\n");
             return PLAY_GAME_ERR;
         }
 
-        #include "akinator_modes.h"
+        if (!strcmpi ("GAME", cur_cmd))     
+        {                                       
+            if (Play_akinator (&akinator->tree))
+            {
+                PROCESS_ERROR ("Akinator error\n");
+                return PLAY_GAME_ERR;
+            }              
+        }   
 
-        /*else*/
+        else if (!strcmpi ("PRINT", cur_cmd))
+        {
+            if (Print_database (&akinator->tree))
+            {
+                PROCESS_ERROR ("Print database error\n");
+                return DRAW_DATABASE_ERR;
+            }
+        }
+
+        else if (!strcmpi ("DEFINITION", cur_cmd))     
+        {                                       
+            if (Get_definition (&akinator->tree))
+            {
+                PROCESS_ERROR ("Get definition error\n");
+                return GET_DEFINITION_ERR;
+            }              
+        } 
+
+        else if (!strcmpi ("COMPARISON", cur_cmd))     
+        {                                       
+            if (Compare_objects (&akinator->tree))
+            {
+                PROCESS_ERROR ("Get definition error\n");
+                return COMPARE_OBJECT_ERR;
+            }             
+        } 
+
+        else if (!strcmpi ("EXIT", cur_cmd))     
+        {                                       
+            break;      
+        } 
+
+        else if (!strcmpi ("MODES", cur_cmd))     
+        {                                       
+            Print_modes ();            
+        } 
+        
+        else
             Phrase_akinator (RED, "I don't known this commands!\n");
     }
 
@@ -113,7 +210,9 @@ void Phrase_akinator (const char *colour, const char *format, ...)
         sprintf (voice_command, "%s%s%s", "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'"
                                                                 " xml:lang='EN'>", print_command, "</speak>");
 
-        txSpeak (voice_command);
+        #ifdef WINDOWS_USER
+            txSpeak (voice_command);
+        #endif
     
     #endif
     va_end(args);
@@ -149,8 +248,9 @@ static int Print_modes ()
     Phrase_akinator (RESET, "2. Print. A picture of a tree with all current nodes will be drawn.\n");
     Phrase_akinator (RESET, "3. Definition. Tom, using his database, will define the given word.\n");
     Phrase_akinator (RESET, "4. Comparison. Tom, using his database, tries to compare objects.\n");
-    Phrase_akinator (RESET, "5. Exit. Finish the game.\n");
-    Phrase_akinator (RESET, "6. Modes. Print mode List.\n");
+    Phrase_akinator (RESET, "5. Modes. Print mode List.\n");
+    Phrase_akinator (RESET, "6. Exit. Finish the game.\n");
+    
 
     printf ("\n");
 
@@ -175,15 +275,13 @@ static int Print_database (Tree *tree)
 
     if (Draw_tree_graph (tree, "graph_img/cur_graph.png"))
     {
-        Log_report ("Error in graph drawing\n");
-        Err_report ();
+        PROCESS_ERROR ("Error in graph drawing\n");
         return DRAW_DATABASE_ERR;
     }
 
     if (system ("@temp\\graph_img\\cur_graph.png"))
     {
-        Log_report ("Failed to open image\n");
-        Err_report ();
+        PROCESS_ERROR ("Failed to open image\n");
         return DRAW_DATABASE_ERR;
     }
 
@@ -192,17 +290,27 @@ static int Print_database (Tree *tree)
 
 //======================================================================================
 
-static int Get_definition (Tree *tree, const char *name_obj)
+static int Get_definition (Tree *tree)
 {
     assert (tree != nullptr && "tree is nullptr");
-    assert (name_obj != nullptr && "name_obj is nullptr");
+
+    Phrase_akinator (RESET, "Enter the name of the object you want to find\n");
+
+    My_flush ();
+
+    char name_obj[Max_command_buffer] = {0};
+    if (Read_string (name_obj))
+    {
+        Log_report ("Error reading the name of object\n");
+        Err_report ();
+        return GET_DEFINITION_ERR;
+    }
 
     Stack def = {};
 
     if (Stack_ctor (&def, Min_stack_capacity))
     {
-        Log_report ("Ctor stack error\n");
-        Err_report ();
+        PROCESS_ERROR ("Ctor stack error\n");
         return GET_DEFINITION_ERR;
     }
 
@@ -210,13 +318,11 @@ static int Get_definition (Tree *tree, const char *name_obj)
     if (Find_object (tree->root, name_obj, &def))
     {
         Phrase_akinator (YELLOW, "Oh, I know what it is, listen.\n");
-       
         Phrase_akinator (GREEN, "%s ", name_obj);
        
         if (Print_definition (&def, GREEN))
         {
-            Log_report ("Error in definition entry\n");
-            Err_report ();
+            PROCESS_ERROR ("Error in definition entry\n");
             return GET_DEFINITION_ERR;
         }
 
@@ -233,8 +339,7 @@ static int Get_definition (Tree *tree, const char *name_obj)
 
     if (Stack_dtor (&def))
     {
-        Log_report ("Dtor stack error\n");
-        Err_report ();
+        PROCESS_ERROR ("Dtor stack error\n");        
         return GET_DEFINITION_ERR;
     }
 
@@ -243,127 +348,111 @@ static int Get_definition (Tree *tree, const char *name_obj)
 
 //======================================================================================
 
-static int Compare_objects (Tree *tree, 
-                            const char *name_obj1, const char *name_obj2)
+static int Compare_objects (Tree *tree)
 {
     assert (tree != nullptr && "tree is nullptr");
-    assert (name_obj1 != nullptr && "name_obj1 is nullptr");
-    assert (name_obj2 != nullptr && "name_obj2 is nullptr");
+    
+    Phrase_akinator (RESET, "Enter the names of the objects you want to compare\n");
 
-    if (!strcmpi (name_obj1, name_obj2))
+    char name_obj[3][Max_command_buffer] = {0};
+    Stack def_obj[3] = {};
+
+    int size_def[3] = {0};
+
+    My_flush ();
+
+    for (int ind = 1; ind <= 2; ind++)
     {
-        Phrase_akinator (RESET, "\nYou asked the same. I can define an object.\n");
-        
-        if (Get_definition (tree, name_obj1))
+        if (Read_string (name_obj[ind]))
         {
-            Log_report ("GEet definition error\n");
+            Log_report ("Error reading the name of object\n");
             Err_report ();
+            return COMPARE_OBJECT_ERR;
+        }
+
+        if (Stack_ctor (&def_obj[ind], Min_stack_capacity))
+        {
+            PROCESS_ERROR ("Ctor stack error\n");
+            return COMPARE_OBJECT_ERR;
+        }
+
+        if (!Find_object (tree->root, name_obj[ind], &def_obj[ind]))
+        {
+            Phrase_akinator (BLUE, "\nI don't know of such %s.\n", name_obj[ind]);
+            return 0;
+        }
+
+        size_def[ind] = Stack_get_size (&def_obj[ind]);
+    }
+
+    if (!strcmpi (name_obj[1], name_obj[2]))
+    {
+        Phrase_akinator (RESET, "The same word was given\n");
+        Phrase_akinator (GREEN, "%s ", name_obj[1]);
+
+        if (Print_definition (&def_obj[1], GREEN))
+        {
+            PROCESS_ERROR ("Error in definition entry\n");
             return GET_DEFINITION_ERR;
         }
 
+        printf ("\n");
+
         return 0;
     }
 
-    Stack def_obj1 = {};
-
-    if (Stack_ctor (&def_obj1, Min_stack_capacity))
-    {
-        Log_report ("Ctor stack error\n");
-        Err_report ();
-        return COMPARE_OBJECT_ERR;
-    }
-
-    if (!Find_object (tree->root, name_obj1, &def_obj1))
-    {
-        Phrase_akinator (BLUE, "\nI don't know of such %s.\n", name_obj1);
-        return 0;
-    }
-
-
-    Stack def_obj2 = {};
-
-    if (Stack_ctor (&def_obj2, Min_stack_capacity))
-    {
-        Log_report ("Ctor stack error\n");
-        Err_report ();
-        return COMPARE_OBJECT_ERR;
-    }
-
-    if (!Find_object (tree->root, name_obj2, &def_obj2))
-    {
-        Phrase_akinator (BLUE, "\nI don't know of such %s.\n", name_obj2);
-        return 0;
-    }
-
-
-    int size_def1 = Stack_get_size (&def_obj1);
-    int size_def2 = Stack_get_size (&def_obj2);
 
     Phrase_akinator (GREEN, "%s and %s they are similar in that they both ", 
-                                                  name_obj1, name_obj2);
+                                                  name_obj[1], name_obj[2]);
 
-    while (size_def1 > 0 && size_def2 > 0)
+    while (size_def[1] > 0 && size_def[2] > 0)
     {
         char *node_data1 = nullptr;
         char *node_data2 = nullptr;
 
-        Stack_pop (&def_obj1, &node_data1);
-        Stack_pop (&def_obj2, &node_data2);
+        Stack_pop (&def_obj[1], &node_data1);
+        Stack_pop (&def_obj[2], &node_data2);
 
         if (strcmpi (node_data1, node_data2))
         {
-            Stack_push (&def_obj1, node_data1);
-            Stack_push (&def_obj2, node_data2); 
+            Stack_push (&def_obj[1], node_data1);
+            Stack_push (&def_obj[2], node_data2); 
             break;
         }
 
         Phrase_akinator (GREEN, "%s ", node_data1);
     
-        size_def1--;
-        size_def2--;
+        size_def[1]--;
+        size_def[2]--;
     }
 
-    if (size_def1 > 0 || size_def2 > 0)
+    if (size_def[1] > 0 || size_def[2] > 0)
         Phrase_akinator (RED, " but ");
 
-    if (size_def1 > 0){
-        Phrase_akinator (RED, "%s ", name_obj1);
 
-        if (Print_definition (&def_obj1, RED))
-        {
-            Log_report ("Error in definition entry\n");
-            Err_report ();
-            return GET_DEFINITION_ERR;
+    for (int ind = 1; ind <= 2; ind++)
+    {
+        if (size_def[ind] > 0){
+            Phrase_akinator (RED, "%s ", name_obj[ind]);
+
+            if (Print_definition (&def_obj[ind], RED))
+            {
+                PROCESS_ERROR ("Error in definition entry\n");
+                return GET_DEFINITION_ERR;
+            }
         }
     }
-
-
-    if (size_def2 > 0){
-        Phrase_akinator (RED, "%s ", name_obj2);
-
-        if (Print_definition (&def_obj2, RED))
-        {
-            Log_report ("Error in definition entry\n");
-            Err_report ();
-            return GET_DEFINITION_ERR;
-        }
-    }
+    
 
     printf ("\n");
 
-
-    if (Stack_dtor (&def_obj1))
+    for (int ind = 1; ind <= 2; ind++)
     {
-        Log_report ("Dtor stack error\n");
-        Err_report ();
-        return GET_DEFINITION_ERR;
-    }
-
-    if (Stack_dtor (&def_obj2))
-    {
-        Log_report ("Dtor stack error\n");
-        Err_report ();
-        return GET_DEFINITION_ERR;
+        if (Stack_dtor (&def_obj[ind]))
+        {
+            PROCESS_ERROR ("Dtor stack error\n");
+            return GET_DEFINITION_ERR;
+        }
     }
 
     return 0;
@@ -382,8 +471,7 @@ static int Print_definition (Stack *def, const char *colour)
         char *node_data = nullptr;
         if (Stack_pop (def, &node_data))
         {
-            Log_report ("Removing an element from the stack failed\n");
-            Err_report ();
+            PROCESS_ERROR ("Removing an element from the stack failed\n");
             return PRINT_DEFINITION_ERR;
         }
 
@@ -439,10 +527,8 @@ static int Play_akinator (Tree *tree)
         
         if (Akinator (tree, tree->root))
         {
-            Log_report ("ERROR: Akinator function worked incorrectly\n");
-            Err_report ();
+            PROCESS_ERROR ("ERROR: Akinator function worked incorrectly\n");
             Tree_dump (tree, "PLAY AKINATOR");
-
             return PLAY_AKINATOR_ERR;
         }
 
@@ -483,21 +569,9 @@ static int Akinator (Tree *tree, Node *node)
     {
         Phrase_akinator (BLUE, "I don't know who you asked me. Please, tell me, who is it?\n");
 
-        My_flush ();
-
-        char object[Max_object_buffer] = {0};
-        if (Read_string (object))
+        if (Read_new_object (node))
         {
-            Log_report ("Error reading from console\n");
-            Err_report ();
-            return AKINATOR_GAME_ERR;
-        }
-        
-        node->data = strdup (object);
-        if (Check_nullptr (node->data))
-        {
-            Log_report ("Memory allocation error\n");
-            Err_report ();
+            PROCESS_ERROR ("Failed to read the new definition");
             return AKINATOR_GAME_ERR;
         }
 
@@ -529,8 +603,7 @@ static int Akinator (Tree *tree, Node *node)
                 char object[Max_object_buffer] = {0};
                 if (Read_string (object))
                 {
-                    Log_report ("Error reading from console\n");
-                    Err_report ();
+                    PROCESS_ERROR ("Error reading from console\n");
                     return AKINATOR_GAME_ERR;
                 }
 
@@ -539,24 +612,15 @@ static int Akinator (Tree *tree, Node *node)
                 char definition[Max_definition_buffer] = {0};
                 if (Read_string (definition))
                 {
-                    Log_report ("Error reading from console\n");
-                    Err_report ();
+                    PROCESS_ERROR ("Error reading from console\n");
                     return AKINATOR_GAME_ERR;
                 }
 
 
-                if (Add_node_to_pointer (tree, &node->left))
+                if (Add_node_sons (node))
                 {
-                    Log_report ("Error adding node by pointer = |%p|\n", (char*) node->left);
-                    Err_report ();
-                    return AKINATOR_GAME_ERR;
-                }
-
-                if (Add_node_to_pointer (tree, &node->right))
-                {
-                    Log_report ("Error adding node by pointer = |%p|\n", (char*) node->right);
-                    Err_report ();
-                    return AKINATOR_GAME_ERR;
+                    PROCESS_ERROR ("Error adding children of a node = |%p|", (char*) node);
+                    return READ_NODE_ERR;
                 }
                 
 
@@ -565,16 +629,14 @@ static int Akinator (Tree *tree, Node *node)
                 node->left->data = strdup (object);
                 if (Check_nullptr (node->left->data))
                 {
-                    Log_report ("Memory allocation error\n");
-                    Err_report ();
+                    PROCESS_ERROR ("Memory allocation error\n");
                     return AKINATOR_GAME_ERR;
                 }
 
                 node->data = strdup (definition);
                 if (Check_nullptr (node->data))
                 {
-                    Log_report ("Memory allocation error\n");
-                    Err_report ();
+                    PROCESS_ERROR ("Memory allocation error\n");
                     return AKINATOR_GAME_ERR;
                 }
 
@@ -621,14 +683,38 @@ static int Akinator (Tree *tree, Node *node)
 
 //======================================================================================
 
+static int Read_new_object (Node *node)
+{
+    assert (node != nullptr && "node is nullptr");
+
+    My_flush ();
+
+    char object[Max_object_buffer] = {0};
+    if (Read_string (object))
+    {
+        PROCESS_ERROR ("Error reading from console\n");
+        return AKINATOR_GAME_ERR;
+    }
+    
+    node->data = strdup (object);
+    if (Check_nullptr (node->data))
+    {
+        PROCESS_ERROR ("Memory allocation error\n");
+        return AKINATOR_GAME_ERR;
+    }
+
+    return 0;
+}
+
+//======================================================================================
+
 static int Read_string (char *str)
 {
     assert (str != nullptr && "str is nullptr");
 
     if (!fgets (str, Max_command_buffer - 1, stdin))
     {
-        Log_report ("Error reading from console\n");
-        Err_report ();
+        PROCESS_ERROR ("Error reading from console\n");
         return READING_LINE_ERR;
     }
 
@@ -636,6 +722,227 @@ static int Read_string (char *str)
 
     if (pos) *pos = '\0';
     
+    return 0;
+}
+
+//======================================================================================
+
+int Save_database_to_file (const Akinator_struct *akinator, const char *name_output_file)
+{
+    assert (akinator != nullptr && "akinator is nullptr");
+
+
+    FILE *fpout = Open_file_ptr (name_output_file, "w");
+
+    if (Check_nullptr (fpout)) 
+    {
+        PROCESS_ERROR ("Error opening output file named \"%s\"\n", name_output_file);
+        return ERR_FILE_OPEN;
+    }
+
+    if (Save_nodes_recursive_to_file (akinator->tree.root, fpout))
+    {
+        PROCESS_ERROR ("Error saving a tree with a pointer to the root |%p|\n", (char*) akinator->tree.root);
+        return SAVING_DATABASE_ERR;
+    }
+
+    if (Close_file_ptr (fpout)) 
+    {
+        PROCESS_ERROR ("Error close output file named \"%s\"\n", name_output_file);
+        return ERR_FILE_CLOSE;
+    }
+
+    return 0;
+}
+
+//======================================================================================
+
+static int Save_nodes_recursive_to_file (const Node *node, FILE *fpout)
+{
+    assert (node != nullptr && "node is nullptr");
+    assert (fpout != nullptr && "fpout is nullptr");
+
+    if (Is_leaf_node (node))
+        fprintf (fpout, " { %s } ", node->data);
+
+    else
+    {
+        fprintf(fpout, " { %s", node->data);
+
+        if (!Check_nullptr (node->left)) 
+        {
+            if (Save_nodes_recursive_to_file(node->left, fpout))
+                return SAVING_NODE_ERR;
+        }
+
+        if (!Check_nullptr (node->right)) 
+        {
+            if (Save_nodes_recursive_to_file(node->right, fpout))
+                return SAVING_NODE_ERR;
+        }
+
+        fprintf(fpout, " } ");
+    }
+
+    return 0;
+}
+
+//======================================================================================
+
+int Load_database (Akinator_struct *akinator, const char *name_input_file)
+{
+    assert (akinator != nullptr && "akinator is nullptr");
+    assert (name_input_file != nullptr && "name_input_file is nullptr");
+
+    int fdin = Open_file_discriptor (name_input_file, O_RDONLY);
+    if (fdin < 0)
+    {
+        PROCESS_ERROR ("Error opening iputfile file named \"%s\"\n", name_input_file);
+        return ERR_FILE_OPEN;
+    }
+
+    Text_info text = {};
+    
+    if (Text_read (fdin, &text))
+    {
+        PROCESS_ERROR ("Error reading into Text_info structure\n");
+        return ERR_FILE_READING;
+    }
+    
+    akinator->database = text.text_buf;
+    text.pos = 0;
+
+    if (Read_nodes_recursive_from_buffer (akinator->tree.root, &text))
+    {   
+        PROCESS_ERROR ("Error read a tree with a pointer to the root |%p|\n", 
+                                                (char*) akinator->tree.root);
+        return READ_DATABASE_ERR;
+    }
+
+    if (Close_file_discriptor (fdin))
+    {
+        PROCESS_ERROR ("Error close input file named \"%s\"\n", name_input_file);
+        return ERR_FILE_CLOSE;
+    }
+
+    return 0;
+}
+
+//======================================================================================
+
+static int Read_nodes_recursive_from_buffer (Node *node, Text_info *text)
+{
+    assert (text != nullptr && "text is nullptr");
+
+    if (Read_node_from_buffer (node, text))
+    {
+        PROCESS_ERROR ("Error reading the value of node = |%p|", (char*) node);
+        return READ_NODE_ERR;
+    }
+    
+    if (*(text->text_buf + text->pos) == '}') 
+    {
+        text->pos++;
+        return 0;
+    }
+
+    if (*(text->text_buf + text->pos) == '{') {
+        
+        if (Add_node_sons (node))
+        {
+            PROCESS_ERROR ("Error adding children of a node = |%p|", (char*) node);
+            return READ_NODE_ERR;
+        }
+
+        if (Read_nodes_recursive_from_buffer (node->left, text))
+        {
+            PROCESS_ERROR ("Error reading the value of the left son = |%p|",
+                                                        (char*) node->left);
+            return READ_NODE_ERR;
+        }
+
+        if (Read_nodes_recursive_from_buffer (node->right, text))
+        {
+            PROCESS_ERROR ("Error reading the value of the right son = |%p|",
+                                                        (char*) node->right);
+            return READ_NODE_ERR;
+        }
+
+        int shift = 0;
+        char symbol = 0;
+
+        int result_scanned = sscanf (text->text_buf + text->pos, " %c %n", &symbol, &shift);
+        if (result_scanned != 1)
+        {
+            PROCESS_ERROR ("Read error, was read: %d\n", result_scanned);
+            return READ_NODE_ERR;
+        }
+        
+
+        if (symbol == '}') 
+        {
+            text->pos += shift;
+            return 0;
+        }
+
+        else 
+        {
+            PROCESS_ERROR ("Read error, undefined symbol, was read: |%c|\n", symbol);
+            return READ_NODE_ERR;
+        }
+
+    }
+    
+    return READ_NODE_ERR;
+}
+
+//======================================================================================
+
+//======================================================================================
+
+static int Read_node_from_buffer (Node *node, Text_info *text)
+{
+    assert (text != nullptr && "text is nullptr");
+
+    int shift = 0;
+    char symbol = 0;
+    
+    int result_scanned = sscanf (text->text_buf + text->pos, " %c %n", &symbol, &shift);
+    if (result_scanned != 1) 
+    {
+        PROCESS_ERROR ("Read error, was read: %d\n", result_scanned);
+        return READ_NODE_ERR;
+    }
+    
+    if (symbol != '{') 
+    {
+        PROCESS_ERROR ("Read error, undefined symbol, was read: |%c|\n", symbol);
+        return READ_DATABASE_ERR;
+    }
+
+    text->pos += shift;
+    char *node_data = (char*) (text->text_buf + text->pos);
+
+    symbol = 0;
+    int len_word = 0;
+
+    while (symbol != '{' && symbol != '}') 
+    {
+        result_scanned = sscanf (text->text_buf + text->pos, "%*s%n %n%c", 
+                                                    &len_word, &shift, &symbol);
+        if (result_scanned != 1) 
+        {
+            PROCESS_ERROR ("Read error, was read: %d\n", result_scanned);
+            return READ_NODE_ERR;
+        }
+        
+        text->pos += shift;
+    }
+    
+    *(text->text_buf + text->pos - shift + len_word) = '\0';
+    
+    node->data = node_data;
+
     return 0;
 }
 

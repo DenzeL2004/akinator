@@ -1,7 +1,11 @@
+#include "architecture/os_config.h"
+
 #include <stdio.h>
 #include <string>
-#include <windows.h>
 
+#ifdef WINDOWS_USER
+    #include <windows.h>
+#endif
 
 #include "akinator_game/akinator_game.h"
 #include "src/log_info/log_errors.h"
@@ -10,7 +14,10 @@
 
 int main (int argc, char *argv[])
 {
-    system(("chcp " + std::to_string(CP_UTF8)).c_str());
+    #ifdef WINDOWS_USER
+        system(("chcp " + std::to_string(CP_UTF8)).c_str());
+    #endif
+    
  
     #ifdef USE_LOG
         
@@ -20,9 +27,9 @@ int main (int argc, char *argv[])
     #endif 
     
 
-    Tree tree = {};
+    Akinator_struct akinator = {};
 
-    if (Tree_ctor (&tree))
+    if (Akinator_struct_ctor (&akinator))
     {
         Log_report ("ERROR: Ctor tree in main\n");
         Err_report ();
@@ -36,7 +43,7 @@ int main (int argc, char *argv[])
 
         case 2:
         {
-            Read_tree_from_file (&tree, argv[1]);
+            Load_database (&akinator, argv[1]);
             break;
         }
 
@@ -46,11 +53,11 @@ int main (int argc, char *argv[])
             return -1;
     }
     
-    Game (&tree);
+    Game (&akinator);
     
-    Save_tree_to_file (&tree);
+    Save_database_to_file (&akinator);
 
-    if (Tree_dtor (&tree))
+    if (Akinator_struct_ctor (&akinator))
     {
         Log_report ("ERROR: Dtor tree in main\n");
         Err_report ();
