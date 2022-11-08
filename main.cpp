@@ -52,7 +52,7 @@ int main (int argc, char *argv[])
             Err_report ();
             return -1;
     }
-    
+
     Game (&akinator);
     
     Save_database_to_file (&akinator);

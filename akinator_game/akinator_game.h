@@ -5,6 +5,7 @@
 #include "../src/tree/draw_tree.h"
 
 
+
 //#define USE_VOICE_MESSAGE
 
 
@@ -21,6 +22,7 @@ enum Akinator_func_err
 
     PRINT_DEFINITION_ERR        = -7,
     READING_LINE_ERR            = -8,
+    MAKE_STR_DEFINITION         = -15,
 
     AKINATOR_STRUCT_CTOR_ERR    = -9,
     AKINATOR_STRUCT_DTOR_ERR    = -10,
@@ -31,6 +33,13 @@ enum Akinator_func_err
     READ_NODE_ERR               = -13,
     READ_DATABASE_ERR           = -14,
 
+};
+
+
+enum Voice_mode
+{
+    SILENCE = 0,
+    VOICE   = 1,
 };
 
 struct Akinator_struct

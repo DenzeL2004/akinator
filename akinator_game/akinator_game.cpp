@@ -24,7 +24,7 @@
 #include "../src/process_text/process_text.h"
 
 
-void Phrase_akinator (const char *colour, const char *format, ...); 
+void Phrase_akinator (const char *colour, const int voice_mode, const char *format, ...); 
 
 static int Parting_akinator ();
 
@@ -52,10 +52,14 @@ static int Get_definition (Tree *tree);
 
 static int Compare_objects (Tree *tree);
 
+static int Print_similar (Stack *def_obj1, Stack *def_obj2);
+
 
 static int Find_object (Node *node, const char *name_obj, Stack *def);
 
 static int Print_definition (Stack *def, const char *colour = RESET); 
+
+static int Make_string_definition (Stack *def, char* str_definition);
 
 
 static int Save_nodes_recursive_to_file (const Node *node, FILE *fpout);
@@ -116,12 +120,12 @@ int Game (Akinator_struct *akinator)
 
     Greeting_akinator ();
 
-    Phrase_akinator (RESET, "I have several modes of operation, what shall we do?\n");
+    Phrase_akinator (RESET, VOICE, "I have several modes of operation, what shall we do?\n");
     Print_modes ();
 
     while (true)
     {
-        Phrase_akinator (RESET, "Enter command: ");
+        Phrase_akinator (RESET, VOICE, "Enter command: ");
 
         char cur_cmd[Max_command_buffer] = {0};
 
@@ -178,7 +182,7 @@ int Game (Akinator_struct *akinator)
         } 
         
         else
-            Phrase_akinator (RED, "I don't known this commands!\n");
+            Phrase_akinator (RED, VOICE, "I don't known this commands!\n");
     }
 
     Parting_akinator ();
@@ -190,7 +194,7 @@ int Game (Akinator_struct *akinator)
 
 //======================================================================================
 
-void Phrase_akinator (const char *colour, const char *format, ...) 
+void Phrase_akinator (const char *colour, int voice_mode, const char *format, ...) 
 { 
     assert (colour != nullptr && "colour is nullptr");
     assert (format != nullptr && "format is nullptr");
@@ -205,14 +209,17 @@ void Phrase_akinator (const char *colour, const char *format, ...)
     Print_colour (colour, print_command);
 
     #ifdef USE_VOICE_MESSAGE
-    
-        char voice_command [Max_command_buffer] = {0};
-        sprintf (voice_command, "%s%s%s", "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'"
-                                                                " xml:lang='EN'>", print_command, "</speak>");
 
-        #ifdef WINDOWS_USER
-            txSpeak (voice_command);
-        #endif
+        if (voice_mode)
+        {    
+            char voice_command [Max_command_buffer] = {0};
+            sprintf (voice_command, "%s%s%s", "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'"
+                                                                    " xml:lang='EN'>", print_command, "</speak>");
+
+            #ifdef WINDOWS_USER
+                txSpeak (voice_command);
+            #endif
+        }
     
     #endif
     va_end(args);
@@ -224,16 +231,16 @@ void Phrase_akinator (const char *colour, const char *format, ...)
 
 static int Greeting_akinator ()
 {
-    Phrase_akinator (YELLOW, "Loading...\n");
+    Phrase_akinator (YELLOW, VOICE, "Loading...\n");
 
     for (int time = 1; time <= 3; time++)
-        Phrase_akinator (YELLOW, "Connecting to the networ: %d%\n", time * 33);
+        Phrase_akinator (YELLOW, VOICE, "Connecting to the networ: %d%\n", time * 33);
     
 
-    Phrase_akinator (GREEN, "\nComplete 100%\n");
+    Phrase_akinator (GREEN, VOICE, "\nComplete 100%\n");
 
-    Phrase_akinator (RESET, "\nHello, my name is Akinator Tom.\n");
-    Phrase_akinator (YELLOW, "I'm glad you started me up, let's play!!!\n");
+    Phrase_akinator (RESET, VOICE, "\nHello, my name is Akinator Tom.\n");
+    Phrase_akinator (YELLOW, VOICE, "I'm glad you started me up, let's play!!!\n");
     
     return 0;
 }
@@ -244,12 +251,12 @@ static int Print_modes ()
 {
     printf ("\n");
 
-    Phrase_akinator (RESET, "1. Game. Akinator will try to guess your hidden word.\n");
-    Phrase_akinator (RESET, "2. Print. A picture of a tree with all current nodes will be drawn.\n");
-    Phrase_akinator (RESET, "3. Definition. Tom, using his database, will define the given word.\n");
-    Phrase_akinator (RESET, "4. Comparison. Tom, using his database, tries to compare objects.\n");
-    Phrase_akinator (RESET, "5. Modes. Print mode List.\n");
-    Phrase_akinator (RESET, "6. Exit. Finish the game.\n");
+    Phrase_akinator (RESET, SILENCE, "1. Game. Akinator will try to guess your hidden word.\n");
+    Phrase_akinator (RESET, SILENCE, "2. Print. A picture of a tree with all current nodes will be drawn.\n");
+    Phrase_akinator (RESET, SILENCE, "3. Definition. Tom, using his database, will define the given word.\n");
+    Phrase_akinator (RESET, SILENCE, "4. Comparison. Tom, using his database, tries to compare objects.\n");
+    Phrase_akinator (RESET, SILENCE, "5. Modes. Print mode List.\n");
+    Phrase_akinator (RESET, SILENCE, "6. Exit. Finish the game.\n");
     
 
     printf ("\n");
@@ -261,8 +268,8 @@ static int Print_modes ()
 
 static int Parting_akinator ()
 {
-    Phrase_akinator (YELLOW, "Have you already played it???\n");
-    Phrase_akinator (BLUE, "I will miss you, come back soon\n");
+    Phrase_akinator (YELLOW, VOICE, "Have you already played it???\n");
+    Phrase_akinator (BLUE,   VOICE, "I will miss you, come back soon\n");
 
     return 0;
 }
@@ -294,7 +301,7 @@ static int Get_definition (Tree *tree)
 {
     assert (tree != nullptr && "tree is nullptr");
 
-    Phrase_akinator (RESET, "Enter the name of the object you want to find\n");
+    Phrase_akinator (RESET, VOICE, "Enter the name of the object you want to find\n");
 
     My_flush ();
 
@@ -317,8 +324,8 @@ static int Get_definition (Tree *tree)
 
     if (Find_object (tree->root, name_obj, &def))
     {
-        Phrase_akinator (YELLOW, "Oh, I know what it is, listen.\n");
-        Phrase_akinator (GREEN, "%s ", name_obj);
+        Phrase_akinator (YELLOW, VOICE, "Oh, I know what it is, listen.\n");
+        Phrase_akinator (GREEN,  VOICE, "%s ", name_obj);
        
         if (Print_definition (&def, GREEN))
         {
@@ -331,7 +338,7 @@ static int Get_definition (Tree *tree)
 
     else
     {
-        Phrase_akinator (BLUE, "You will be surprised, "
+        Phrase_akinator (BLUE, VOICE, "You will be surprised, "
                             "but I don't know what you thought of me, "
                             "it turned out awkwardly.\n");
     }
@@ -352,12 +359,10 @@ static int Compare_objects (Tree *tree)
 {
     assert (tree != nullptr && "tree is nullptr");
     
-    Phrase_akinator (RESET, "Enter the names of the objects you want to compare\n");
+    Phrase_akinator (RESET, VOICE, "Enter the names of the objects you want to compare\n");
 
     char name_obj[3][Max_command_buffer] = {0};
     Stack def_obj[3] = {};
-
-    int size_def[3] = {0};
 
     My_flush ();
 
@@ -378,17 +383,15 @@ static int Compare_objects (Tree *tree)
 
         if (!Find_object (tree->root, name_obj[ind], &def_obj[ind]))
         {
-            Phrase_akinator (BLUE, "\nI don't know of such %s.\n", name_obj[ind]);
+            Phrase_akinator (BLUE, VOICE, "\nI don't know of such %s.\n", name_obj[ind]);
             return 0;
         }
-
-        size_def[ind] = Stack_get_size (&def_obj[ind]);
     }
 
     if (!strcmpi (name_obj[1], name_obj[2]))
     {
-        Phrase_akinator (RESET, "The same word was given\n");
-        Phrase_akinator (GREEN, "%s ", name_obj[1]);
+        Phrase_akinator (RESET, VOICE, "The same word was given\n");
+        Phrase_akinator (GREEN, VOICE, "%s ", name_obj[1]);
 
         if (Print_definition (&def_obj[1], GREEN))
         {
@@ -401,41 +404,38 @@ static int Compare_objects (Tree *tree)
         return 0;
     }
 
+    Phrase_akinator (RED,    VOICE, "%s ", name_obj[1]);
+    Phrase_akinator (RESET,  VOICE, "and ");
+    Phrase_akinator (YELLOW, VOICE, "%s ", name_obj[2]);
+    Phrase_akinator (GREEN, VOICE, "they are similar in that they both ");
 
-    Phrase_akinator (GREEN, "%s and %s they are similar in that they both ", 
-                                                  name_obj[1], name_obj[2]);
-
-    while (size_def[1] > 0 && size_def[2] > 0)
+    if (Print_similar (&def_obj[1], &def_obj[2]))
     {
-        char *node_data1 = nullptr;
-        char *node_data2 = nullptr;
-
-        Stack_pop (&def_obj[1], &node_data1);
-        Stack_pop (&def_obj[2], &node_data2);
-
-        if (strcmpi (node_data1, node_data2))
-        {
-            Stack_push (&def_obj[1], node_data1);
-            Stack_push (&def_obj[2], node_data2); 
-            break;
-        }
-
-        Phrase_akinator (GREEN, "%s ", node_data1);
-    
-        size_def[1]--;
-        size_def[2]--;
+        PROCESS_ERROR ("Unable to print similar features of objects\n");
+        return COMPARE_OBJECT_ERR;
     }
 
+    int size_def[3] = {0};
+
+    size_def[1] = Stack_get_size (&def_obj[1]);
+    size_def[2] = Stack_get_size (&def_obj[2]);
+
+
     if (size_def[1] > 0 || size_def[2] > 0)
-        Phrase_akinator (RED, " but ");
+        Phrase_akinator (RESET, VOICE, "but ");
 
 
     for (int ind = 1; ind <= 2; ind++)
     {
         if (size_def[ind] > 0){
-            Phrase_akinator (RED, "%s ", name_obj[ind]);
+            char *colour = (char*) RESET;
 
-            if (Print_definition (&def_obj[ind], RED))
+            if (ind == 1) colour = (char*) RED;
+            if (ind == 2) colour = (char*) YELLOW;
+
+            Phrase_akinator (colour, VOICE, "%s ", name_obj[ind]);
+
+            if (Print_definition (&def_obj[ind], colour))
             {
                 PROCESS_ERROR ("Error in definition entry\n");
                 return GET_DEFINITION_ERR;
@@ -460,7 +460,73 @@ static int Compare_objects (Tree *tree)
 
 //======================================================================================
 
+static int Print_similar (Stack *def_obj1, Stack *def_obj2)
+{
+    assert (def_obj1 != nullptr && "def_obj1 is nullptr");
+    assert (def_obj2 != nullptr && "def_obj2 is nullptr");
+
+    char str_definition[Max_definition_buffer] = {0};
+
+    int size_def1 = Stack_get_size (def_obj1);
+    int size_def2 = Stack_get_size (def_obj2);
+    
+    while (size_def1 > 0 && size_def1 > 0)
+    {
+        char *node_data1 = nullptr;
+        char *node_data2 = nullptr;
+
+        if (Stack_pop (def_obj1, &node_data1))
+        {
+            PROCESS_ERROR ("Removing an element from the stack failed\n");
+            return PRINT_DEFINITION_ERR;
+        }
+
+        if (Stack_pop (def_obj2, &node_data2))
+        {
+            PROCESS_ERROR ("Removing an element from the stack failed\n");
+            return PRINT_DEFINITION_ERR;
+        }
+
+        if (strcmpi (node_data1, node_data2))
+        {
+            Stack_push (def_obj1, node_data1);
+            Stack_push (def_obj2, node_data2); 
+            break;
+        }
+
+        sprintf (str_definition, "%s ", node_data1);
+    
+        size_def1--;
+        size_def2--;
+    }
+
+    Phrase_akinator (GREEN, VOICE, "%s ", str_definition);
+
+    return 0;
+}
+
+//======================================================================================
+
 static int Print_definition (Stack *def, const char *colour)
+{
+    assert (def != nullptr && "Stack def is nullptr");
+
+    char str_definition[Max_definition_buffer] = {0};
+
+    if (Make_string_definition (def, str_definition))
+    {
+        PROCESS_ERROR ("Print definition error\n");
+        return PRINT_DEFINITION_ERR;
+    }
+
+    Phrase_akinator (colour, VOICE, "%s ", str_definition);
+
+    return 0;
+}
+
+//======================================================================================
+
+static int Make_string_definition (Stack *def, char* str_definition)
 {
     assert (def != nullptr && "Stack def is nullptr");
 
@@ -472,10 +538,11 @@ static int Print_definition (Stack *def, const char *colour)
         if (Stack_pop (def, &node_data))
         {
             PROCESS_ERROR ("Removing an element from the stack failed\n");
-            return PRINT_DEFINITION_ERR;
+            return MAKE_STR_DEFINITION;
         }
+        
+        sprintf (str_definition, "%s ", node_data);
 
-        Phrase_akinator (colour, "%s ", node_data);
         size--;
     }
 
@@ -517,7 +584,7 @@ static int Play_akinator (Tree *tree)
 {
     assert (tree != nullptr && "tree is nullptr");
 
-    Phrase_akinator (RESET, "Let's start the game\n");
+    Phrase_akinator (RESET, VOICE, "Let's start the game\n");
 
     bool let_play = true;
 
@@ -533,8 +600,8 @@ static int Play_akinator (Tree *tree)
         }
 
         printf ("\n");
-        Phrase_akinator (RESET, "Want to play again?\n");
-        Phrase_akinator (RESET, "Press Y - YES\nPress N - NO\n");
+        Phrase_akinator (RESET, VOICE,   "Want to play again?\n");
+        Phrase_akinator (RESET, SILENCE, "Entry Y - YES\nEntry N - NO\n");
         printf ("\n");
 
         My_flush ();
@@ -551,7 +618,7 @@ static int Play_akinator (Tree *tree)
 
             
             default:
-                Phrase_akinator (RED, "Incorrect command\n\n");
+                Phrase_akinator (RED, VOICE, "Incorrect command\n\n");
                 return PLAY_AKINATOR_ERR;
         }
     } 
@@ -567,7 +634,7 @@ static int Akinator (Tree *tree, Node *node)
 
     if (Check_nullptr (node->data))
     {
-        Phrase_akinator (BLUE, "I don't know who you asked me. Please, tell me, who is it?\n");
+        Phrase_akinator (BLUE, VOICE, "I don't know who you asked me. Please, tell me, who is it?\n");
 
         if (Read_new_object (node))
         {
@@ -575,7 +642,7 @@ static int Akinator (Tree *tree, Node *node)
             return AKINATOR_GAME_ERR;
         }
 
-        Phrase_akinator (YELLOW, "Thank you, now I know more, next time I'll guess right.\n");
+        Phrase_akinator (YELLOW, VOICE, "Thank you, now I know more, next time I'll guess right.\n");
 
         return 0;
     }
@@ -583,20 +650,20 @@ static int Akinator (Tree *tree, Node *node)
     
     if (Is_leaf_node (node))
     {
-        Phrase_akinator (RESET, "It is %s?\n", node->data);
-        Phrase_akinator (RESET, "Press Y - YES\nPress N - NO\n");
+        Phrase_akinator (RESET, VOICE, "It is %s?\n", node->data);
+        Phrase_akinator (RESET, SILENCE, "Entry Y - YES\nEntry N - NO\n");
 
         My_flush ();
 
         switch (getchar ())
         {
             case 'Y':
-                Phrase_akinator (YELLOW, "Haha, I won!!!!\n");
+                Phrase_akinator (YELLOW, VOICE, "Haha, I won!!!!\n");
                 break;
 
             case 'N':
             {
-                Phrase_akinator (BLUE, "It seems I don't know who you thought of, who is it?\n");
+                Phrase_akinator (BLUE, VOICE, "It seems I don't know who you thought of, who is it?\n");
 
                 My_flush ();
 
@@ -607,7 +674,7 @@ static int Akinator (Tree *tree, Node *node)
                     return AKINATOR_GAME_ERR;
                 }
 
-                Phrase_akinator (RESET, "I'm curious, what's the difference between %s?\n", node->data);
+                Phrase_akinator (RESET, VOICE, "I'm curious, what's the difference between %s?\n", node->data);
 
                 char definition[Max_definition_buffer] = {0};
                 if (Read_string (definition))
@@ -640,12 +707,12 @@ static int Akinator (Tree *tree, Node *node)
                     return AKINATOR_GAME_ERR;
                 }
 
-                Phrase_akinator (YELLOW, "Thank you, now I know more, next time I'll guess right.\n");
+                Phrase_akinator (YELLOW, VOICE, "Thank you, now I know more, next time I'll guess right.\n");
                 break;
             }
 
             default:
-                Phrase_akinator (RED, "Incorrect entered command\n\n");
+                Phrase_akinator (RED, VOICE, "Incorrect entered command\n\n");
                 return AKINATOR_GAME_ERR;
 
         }
@@ -655,8 +722,8 @@ static int Akinator (Tree *tree, Node *node)
 
     else
     {
-        Phrase_akinator (RESET, "%s?\n", node->data);
-        Phrase_akinator (RESET, "Press Y - YES\nPress N - NO\n");
+        Phrase_akinator (RESET, VOICE, "%s?\n", node->data);
+        Phrase_akinator (RESET, SILENCE, "Entry Y - YES\nEntry N - NO\n");
 
         My_flush ();
         
@@ -878,7 +945,8 @@ static int Read_nodes_recursive_from_buffer (Node *node, Text_info *text)
             return READ_NODE_ERR;
         }
         
-
+//      "Error READ_NODE_ERR (-13): Read error, was read: 8"
+      
         if (symbol == '}') 
         {
             text->pos += shift;
@@ -895,8 +963,6 @@ static int Read_nodes_recursive_from_buffer (Node *node, Text_info *text)
     
     return READ_NODE_ERR;
 }
-
-//======================================================================================
 
 //======================================================================================
 

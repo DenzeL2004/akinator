@@ -35,7 +35,7 @@ enum Log_errors
             Log_report (__VA_ARGS__);                   \
             Err_report ();                              \
         }                                               \
-        while (0);                                
+        while (0)                                
 
 
 int Open_logs_file ();

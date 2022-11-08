@@ -7,7 +7,7 @@
 #include "../log_info/log_def.h"
 
 
-static const int Max_definition_buffer = 100;
+static const int Max_definition_buffer = 300;
 
 static const int Max_object_buffer     = 100;
 
