@@ -280,7 +280,7 @@ static int Print_database (Tree *tree)
 {
     assert (tree != nullptr && "tree is nullptr");
 
-    if (Draw_tree_graph (tree, "graph_img/cur_graph.png"))
+    if (Draw_tree_graph (tree, "graph_img/cur_graph.png", DRAW_DATA))
     {
         PROCESS_ERROR ("Error in graph drawing\n");
         return DRAW_DATABASE_ERR;
