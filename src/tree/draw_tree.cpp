@@ -15,7 +15,7 @@
 static void Draw_nodes_recursive (FILE *fpout, const Node *node, int *counter, const int node_mode);
 
 
-static void Draw_node (FILE *fpout, const Node *node, const int id, int node_mode);
+static void Draw_node (FILE *fpout, const Node *node, const int id, const int node_mode);
 
 
 
@@ -103,7 +103,7 @@ static void Draw_nodes_recursive (FILE *fpout, const Node *node, int *counter, c
 
 //======================================================================================
 
-static void Draw_node (FILE *fpout, const Node *node, const int id, int node_mode)
+static void Draw_node (FILE *fpout, const Node *node, const int id, const int node_mode)
 {
     assert (node != nullptr && "node is nullptr\n");
 
@@ -115,32 +115,28 @@ static void Draw_node (FILE *fpout, const Node *node, const int id, int node_mod
 
     fprintf (fpout, "node%p [style=filled, shape = record, label =  \"{", ch_ptr);
 
-    if (node_mode & DRAW_ID)
+    if (node_mode & (1 << DRAW_ID))
     {
-        fprintf (fpout, "ID: %d |", id);
-        PRINT_SLASH (fpout, DRAW_ID);
-        DELETE_BYTE_FROM_MODE (DRAW_ID);   
+        fprintf (fpout, "ID: %d ", id);
+        if ((node_mode >> (DRAW_ID + 1)) && Mask_draw_node_modes) fprintf (fpout, "|"); //<- checking to make sure not to create an extra field
     }
 
-    if (node_mode & DRAW_PTR)
+    if (node_mode & (1 << DRAW_PTR))
     {   
-        fprintf (fpout, "NODE POINTER: %p |", ch_ptr);
-        PRINT_SLASH (fpout, DRAW_PTR);
-        DELETE_BYTE_FROM_MODE (DRAW_PTR);
+        fprintf (fpout, "NODE POINTER: %p ", ch_ptr);
+        if ((node_mode >> (DRAW_PTR + 1)) && Mask_draw_node_modes) fprintf (fpout, "|"); //<- checking to make sure not to create an extra field
     }
 
-    if (node_mode & DRAW_DATA)
+    if (node_mode & (1 << DRAW_DATA))
     {
         fprintf (fpout, "DATA: %"ELEM_T_SPEC"", node->data);
-        PRINT_SLASH (fpout, DRAW_DATA);
-        DELETE_BYTE_FROM_MODE (DRAW_DATA);
+        if ((node_mode >> (DRAW_DATA + 1)) && Mask_draw_node_modes) fprintf (fpout, "|"); //<- checking to make sure not to create an extra field
     }      
 
-    if (node_mode & DRAW_SONS_PTR)
+    if (node_mode & (1 << DRAW_SONS_PTR))
     {  
-        fprintf (fpout, "left: %p | right: %p |", ch_left_node_ptr, ch_right_node_ptr);
-        PRINT_SLASH (fpout, DRAW_SONS_PTR);
-        DELETE_BYTE_FROM_MODE (DRAW_SONS_PTR);
+        fprintf (fpout, "left: %p | right: %p ", ch_left_node_ptr, ch_right_node_ptr);
+        if ((node_mode >> (DRAW_SONS_PTR + 1)) && Mask_draw_node_modes) fprintf (fpout, "|"); //<- checking to make sure not to create an extra field
     }
 
     fprintf (fpout, "}\",");

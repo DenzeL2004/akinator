@@ -19,12 +19,13 @@ enum Draw_tree_func_err
 
 enum Tree_node_draw_modes
 {
-    DRAW_PTR        = (1 << 0),
-    DRAW_DATA       = (1 << 1),
+    
+    DRAW_ID         = 0,
 
-    DRAW_SONS_PTR   = (1 << 2),
+    DRAW_PTR        = 1,
+    DRAW_DATA       = 2,
 
-    DRAW_ID    = (1 << 3),
+    DRAW_SONS_PTR   = 3,
 };
 
 #endif  //#endif _DRAW_TREE_H_

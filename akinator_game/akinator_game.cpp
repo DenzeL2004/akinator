@@ -280,7 +280,8 @@ static int Print_database (Tree *tree)
 {
     assert (tree != nullptr && "tree is nullptr");
 
-    if (Draw_tree_graph (tree, "graph_img/cur_graph.png", DRAW_DATA))
+    int node_mode = (1 << DRAW_DATA);
+    if (Draw_tree_graph (tree, "graph_img/cur_graph.png", node_mode))
     {
         PROCESS_ERROR ("Error in graph drawing\n");
         return DRAW_DATABASE_ERR;
@@ -945,7 +946,6 @@ static int Read_nodes_recursive_from_buffer (Node *node, Text_info *text)
             return READ_NODE_ERR;
         }
         
-//      "Error READ_NODE_ERR (-13): Read error, was read: 8"
       
         if (symbol == '}') 
         {

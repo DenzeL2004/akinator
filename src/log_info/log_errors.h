@@ -32,7 +32,7 @@ enum Log_errors
 
 #define PROCESS_ERROR(...)                              \
         {                                               \
-            Log_report (__VA_ARGS__);                   \
+            Log_report (__VA_ARGS__);                   \ 
             Err_report ();                              \
         }                                               \
         while (0)                                
