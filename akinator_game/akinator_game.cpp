@@ -77,7 +77,7 @@ int Akinator_struct_ctor (Akinator_struct *akinator)
 
     if (Tree_ctor (&akinator->tree))
     {
-        PROCESS_ERROR ("ERROR: Ctor tree in main\n");
+        PROCESS_ERROR ("ERROR: Ctor tree in ctor\n");
         return AKINATOR_STRUCT_CTOR_ERR;
     }
     
@@ -94,7 +94,7 @@ int Akinator_struct_dtor (Akinator_struct *akinator)
 
     if (Tree_dtor (&akinator->tree))
     {
-        PROCESS_ERROR ("ERROR: Ctor tree in main\n");
+        PROCESS_ERROR ("ERROR: Dtor tree in dtor\n");
         return AKINATOR_STRUCT_DTOR_ERR;
     }
     

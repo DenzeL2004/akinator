@@ -57,7 +57,7 @@ int main (int argc, char *argv[])
     
     Save_database_to_file (&akinator);
 
-    if (Akinator_struct_ctor (&akinator))
+    if (Akinator_struct_dtor (&akinator))
     {
         Log_report ("ERROR: Dtor tree in main\n");
         Err_report ();
